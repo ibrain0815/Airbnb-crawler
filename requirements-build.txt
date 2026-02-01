@@ -1,0 +1,2 @@
+# exe 빌드 시 추가 설치 (pyinstaller build_exe.spec 전에)
+pyinstaller>=6.0.0

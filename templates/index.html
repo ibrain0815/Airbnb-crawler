@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에어비앤비 크롤링</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg, #f7f9fc 0%, #e8eef7 100%);
+      color: #222;
+    }
+    .container {
+      background: #fff;
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      max-width: 420px;
+      width: 90%;
+    }
+    h1 {
+      margin: 0 0 1.5rem 0;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #ff5a5f;
+      text-align: center;
+    }
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    button {
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+    button:active { transform: translateY(0); }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-home {
+      background: #ff5a5f;
+      color: #fff;
+    }
+    .btn-crawl {
+      background: #00a699;
+      color: #fff;
+    }
+    .btn-excel {
+      background: #217d2e;
+      color: #fff;
+    }
+    .message {
+      margin-top: 1.25rem;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      min-height: 48px;
+    }
+    .message.success { background: #e8f5e9; color: #1b5e20; }
+    .message.error { background: #ffebee; color: #b71c1c; }
+    .message.info { background: #e3f2fd; color: #0d47a1; }
+    .message:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>에어비앤비 크롤링</h1>
+    <div class="buttons">
+      <button type="button" class="btn-home" id="btnHome">홈페이지 접속</button>
+      <button type="button" class="btn-crawl" id="btnCrawl">크롤링 시작</button>
+      <button type="button" class="btn-excel" id="btnExcel">엑셀 저장</button>
+    </div>
+    <div class="message" id="message" role="status"></div>
+  </div>
+  <script>
+    const btnHome = document.getElementById("btnHome");
+    const btnCrawl = document.getElementById("btnCrawl");
+    const btnExcel = document.getElementById("btnExcel");
+    const messageEl = document.getElementById("message");
+
+    function showMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = "message " + (type || "info");
+    }
+
+    function setLoading(btn, loading) {
+      btn.disabled = loading;
+      btn.textContent = loading ? "처리 중…" : btn.dataset.label;
+    }
+
+    btnHome.dataset.label = "홈페이지 접속";
+    btnCrawl.dataset.label = "크롤링 시작";
+    btnExcel.dataset.label = "엑셀 저장";
+
+    btnHome.addEventListener("click", async () => {
+      setLoading(btnHome, true);
+      messageEl.className = "message";
+      messageEl.textContent = "";
+      try {
+        const res = await fetch("/api/open-homepage", { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          showMessage(data.message || "홈페이지를 열었습니다.", "success");
+        } else {
+          showMessage(data.message || "실패했습니다.", "error");
+        }
+      } catch (e) {
+        showMessage("연결 실패: " + e.message, "error");
+      }
+      setLoading(btnHome, false);
+    });
+
+    btnCrawl.addEventListener("click", async () => {
+      setLoading(btnCrawl, true);
+      messageEl.className = "message";
+      messageEl.textContent = "";
+      try {
+        const res = await fetch("/api/start-crawl", { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          showMessage(data.message || data.count + "개 수집했습니다.", "success");
+        } else {
+          showMessage(data.message || "크롤링에 실패했습니다.", "error");
+        }
+      } catch (e) {
+        showMessage("연결 실패: " + e.message, "error");
+      }
+      setLoading(btnCrawl, false);
+    });
+
+    btnExcel.addEventListener("click", async () => {
+      setLoading(btnExcel, true);
+      messageEl.className = "message";
+      messageEl.textContent = "";
+      try {
+        const res = await fetch("/api/save-excel", { method: "POST" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          showMessage(data.message || "저장에 실패했습니다.", "error");
+          setLoading(btnExcel, false);
+          return;
+        }
+        const blob = await res.blob();
+        const name = res.headers.get("Content-Disposition")?.match(/filename="?([^";]+)"?/)?.[1] || "airbnb_listings.xlsx";
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showMessage("엑셀 파일을 다운로드했습니다.", "success");
+      } catch (e) {
+        showMessage("연결 실패: " + e.message, "error");
+      }
+      setLoading(btnExcel, false);
+    });
+  </script>
+</body>
+</html>

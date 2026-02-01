@@ -1,0 +1,38 @@
+■ 에어비앤비 크롤링 — 배포용 실행 파일 만들기
+
+[1] 실행 파일 빌드 방법
+  • 방법 A: build.bat 더블클릭
+    - PyInstaller가 없으면 자동 설치 후 빌드
+    - 완료 후 dist\AirbnbCrawler.exe 생성
+
+  • 방법 B: 터미널에서 직접
+    cd d:\AGENT_AI\CURSOR\RealEstate
+    python -m pip install pyinstaller
+    python -m PyInstaller --noconfirm build_exe.spec
+
+  ※ "액세스가 거부되었습니다" 오류 시:
+    - AirbnbCrawler.exe가 실행 중이면 종료한 뒤 다시 빌드
+    - build.bat을 "관리자 권한으로 실행" 후 다시 시도
+    - dist 폴더를 비운 뒤 다시 빌드
+
+[2] 배포할 파일
+  • dist\AirbnbCrawler.exe  ← 이 파일만 다른 PC로 복사해 사용 가능
+  • output\AirbnbCrawler_Setup.exe  ← 설치 파일 (build_installer.bat 실행 후 생성)
+  • 사용하는 PC에 Chrome 브라우저가 설치되어 있어야 합니다.
+  • 첫 실행 시 exe와 같은 폴더에 wdm_drivers 폴더가 생기며 ChromeDriver가 다운로드됩니다.
+
+[2-1] 설치 파일 만들기
+  • build_installer.bat 더블클릭
+  • Inno Setup(https://jrsoftware.org/isinfo.php)이 설치되어 있어야 함
+  • 완료 후 output\AirbnbCrawler_Setup.exe 생성
+
+[3] 사용 방법
+  1) AirbnbCrawler.exe 실행
+  2) "최대 크롤링 페이지 수" 입력 (1~20, 기본 3)
+  3) [홈페이지 접속] → 에어비앤비가 브라우저로 열림
+  4) 브라우저에서 검색/필터 후 [크롤링 시작]
+  5) [엑셀 저장] → 저장 위치와 파일명 선택
+
+[4] 주의사항
+  • exe와 같은 폴더에 엑셀 파일이 저장됩니다 (저장 시 다른 경로 선택 가능).
+  • 방화벽/백신이 exe 실행을 막을 수 있으므로 예외 처리할 수 있습니다.

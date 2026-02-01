@@ -1,0 +1,111 @@
+여흥레이크빌(주상복합)
+
+https://new.land.naver.com/complexes/12950?ms=37.5111113,127.1014105,16&a=APT:PRE:ABYG:JGC&e=RETAIL
+이 사이트에 있는 아파트 단지정보 내용을 크롤링하는 파이썬 프로그램을 만들고 싶어.동적 크롤링으로 실제 버튼을 누르면서 작동해야 해. 우선 기본적인 코드부터 장성해 줘
+
+
+//*[@id="summaryInfo"]/div[2]/div[2]/button[1]
+링크로 접속한 다음,위의xpath를 기준으로 버튼을 찾고, 이버튼을 눌러 주세요.버튼을 누르고 조금 기다린 다음.
+//*[@id="detailContents1"]/div[1]/table/tbody/tr[1]/td[1]
+이 경로에 있는 박스 내용을 모두 가져오면 됩니다.
+
+
+<a rel="noopener noreferrer nofollow" target="listing_1462047591657160048" aria-labelledby="title_1462047591657160048" href="/rooms/1462047591657160048?adults=1&amp;check_in=2026-02-07&amp;check_out=2026-02-08&amp;search_mode=regular_search&amp;source_impression_id=p3_1769913606_P3tPwF02jTCYOGtQ&amp;previous_page_section_name=1000&amp;federated_search_id=ce2880fa-2bfb-41b1-b542-51c49ca69e55" class="l1ovpqvx atm_npmupv_14b5rvc_10saat9 atm_4s4swg_18xq13z_10saat9 atm_u9em2p_1r3889l_10saat9 atm_1ezpcqw_1u41vd9_10saat9 atm_fyjbsv_c4n71i_10saat9 atm_1rna0z7_1uk391_10saat9 bn2bl2p atm_5j_112asxc atm_9s_1ulexfb atm_e2_1osqo2v atm_fq_idpfg4 atm_mk_stnw88 atm_tk_idpfg4 atm_vy_1osqo2v atm_26_1j28jx2 atm_3f_glywfm atm_kd_glywfm atm_3f_glywfm_jo46a5 atm_l8_idpfg4_jo46a5 atm_gi_idpfg4_jo46a5 atm_3f_glywfm_1icshfk atm_kd_glywfm_19774hq atm_uc_1wx0j5_1w3cfyq_oggzyc atm_70_124fdim_1w3cfyq_oggzyc atm_uc_glywfm_1w3cfyq_pynvjw dir dir-ltr"></a>
+
+### 9.1 초기 크롤러 개발
+
+1. **"네이버 부동산 웹사이트에서 아파트 단지 정보를 크롤링하는 Python 프로그램을 만들어줘. 동적 크롤링과 버튼 클릭 기능을 포함해줘."**
+   - Selenium 기반 동적 크롤링 구조 생성
+   - `main.py`, `requirements.txt` 초기 작성
+
+2. **URL 변경 및 XPath 기반 크롤링**
+   - 네이버 부동산 → 에어비앤비로 타겟 변경
+   - XPath 기반 요소 선택 추가
+
+3. **로봇 감지 우회**
+   - `undetected-chromedriver` 도입
+   - User-Agent 설정, CDP 스텔스 스크립트 추가
+
+### 9.2 브라우저 및 드라이버 설정
+
+4. **"Edge 브라우저 사용하고 싶어"**
+   - Edge 지원 추가 (`BROWSER` 상수)
+   - EdgeChromiumDriverManager 설정
+
+5. **EdgeDriver 다운로드 오류 해결**
+   - `webdriver-manager` 캐시 경로 설정
+   - 수동 EdgeDriver 경로 지원
+
+### 9.3 에어비앤비 크롤링 전환
+
+6. **사용자 입력 기반 크롤링**
+   - 에어비앤비 홈으로 접속 후 사용자가 검색/필터 → 엔터 시 크롤링 시작
+
+7. **에어비앤비 숙소 목록 크롤링**
+   - `get_airbnb_listings()` 함수 작성
+   - 제목, 링크, 가격, 평점 추출
+
+### 9.4 크롤링 정확도 개선
+
+8. **크롤링 속도 개선 및 평점/가격 추출 정확도 향상**
+   - 카드 컨테이너 효율적 탐색
+   - 가격 전용 스타일 span 사용
+   - 평점 "X.X (N)" 형식 우선 추출
+
+9. **최대 크롤링 페이지 수 설정**
+   - GUI에 Spinbox 추가 (1~20 페이지)
+
+10. **엑셀 저장 기능**
+    - `openpyxl` 사용
+    - `save_listings_to_excel()` 함수 추가
+
+### 9.5 GUI 및 배포
+
+11. **데스크톱 GUI 개발**
+    - Flask 대신 tkinter 사용
+    - `gui_app.py` 생성 (3버튼: 홈페이지 접속 / 크롤링 시작 / 엑셀 저장)
+
+12. **PyInstaller exe 빌드**
+    - `build_exe.spec`, `build.bat` 작성
+    - `hiddenimports`에 `main` 모듈 추가
+
+### 9.6 exe 실행 오류 해결
+
+13. **"오류: [WinError 3] 지정된 경로를 찾을 수 없습니다: base_library.zip\\.wdm"**
+    - exe 실행 시 `WDM_LOCAL` 미설정으로 변경
+    - `DriverCacheManager`를 Chrome/Edge 모두에 전달
+    - exe 실행 시 undetected-chromedriver 비활성화
+
+### 9.7 데이터 품질 개선
+
+14. **"가격과 평점이 빠져있는데 누락되지 않도록 개선해줘"**
+    - `_get_card_container()` 개선: 가장 좁은 카드만 선택
+    - 가격/평점 추출에 여러 fallback 추가
+    - 링크를 화면에 스크롤해 지연 로딩 대응
+
+15. **"가격 금액은 총액의 가격을 표시해줘"**
+    - `span[aria-label*="총액"]` 우선 추출
+    - 원래 요금이 아닌 총액만 표시
+
+### 9.8 설치 파일 생성
+
+16. **"설치 파일도 만들어줘"**
+    - Inno Setup 스크립트 작성 (`AirbnbCrawler.iss`)
+    - `build_installer.bat` 생성
+    - 바탕화면 바로가기, 제거 프로그램 포함
+
+### 9.9 문서화
+
+17. **"에어비엔비 개발 기능을 나중에 한번에 개발할수 있도록 지침서를 readme.md파일로 만들어줘"**
+    - 프로젝트 구조, 핵심 함수, DOM 선택자 정리
+    - 개발 워크플로우, 배포 절차, 트러블슈팅 작성
+
+18. **"에어비엔비 크롤링을 만들기 위해 지시내린 프롬프트를 README.md에 순서대로 정리해줘"**
+    - 이 섹션 작성
+
+---
+
+## 10. 참고
+
+- **배포 상세**: `배포안내.txt`
+- **의존성**: selenium, webdriver-manager, openpyxl, (선택) undetected-chromedriver, flask
