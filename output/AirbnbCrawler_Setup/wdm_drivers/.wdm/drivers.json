@@ -1,0 +1,10 @@
+{
+    "win64_chromedriver_144.0.7559.109_for_144.0.7559": {
+        "timestamp": "03/02/2026",
+        "binary_path": "D:\\AGENT_AI\\CURSOR\\RealEstate\\dist\\wdm_drivers\\.wdm\\drivers\\chromedriver\\win64\\144.0.7559.109\\chromedriver-win32/chromedriver.exe"
+    },
+    "win64_chromedriver_144.0.7559.133_for_144.0.7559": {
+        "timestamp": "04/02/2026",
+        "binary_path": "D:\\GitHub\\Airbnb-crawler\\dist\\wdm_drivers\\.wdm\\drivers\\chromedriver\\win64\\144.0.7559.133\\chromedriver-win32/chromedriver.exe"
+    }
+}
