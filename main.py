@@ -1,10 +1,10 @@
 """
-에어비앤비(airbnb.co.kr) 홈페이지 동적 크롤러
-브라우저로 열고, 사용자가 원하는 페이지로 이동한 뒤 숙소 목록 수집
-Edge 또는 Chrome 지원 (로봇 감지 완화 적용)
+ìì´ë¹ì¤ë¹(airbnb.co.kr) ííì´ì§ ëì  í¬ë¡¤ë¬
+ë¸ë¼ì°ì ë¡ ì´ê³ , ì¬ì©ìê° ìíë íì´ì§ë¡ ì´ëí ë¤ ìì ëª©ë¡ ìì§
+Edge ëë Chrome ì§ì (ë¡ë´ ê°ì§ ìí ì ì©)
 
-실행: python main.py → 버튼이 있는 GUI 창이 뜹니다.
-     python main.py --console → 터미널 전용 모드.
+ì¤í: python main.py â ë²í¼ì´ ìë GUI ì°½ì´ ë¹ëë¤.
+     python main.py --console â í°ë¯¸ë ì ì© ëª¨ë.
 """
 
 import os
@@ -12,18 +12,18 @@ import re
 import sys
 import time
 
-# exe로 실행 시 작업 폴더 = exe 위치, 아니면 스크립트 위치
+# exeë¡ ì¤í ì ìì í´ë = exe ìì¹, ìëë©´ ì¤í¬ë¦½í¸ ìì¹
 if getattr(sys, "frozen", False):
     _PROJECT_DIR = os.path.dirname(sys.executable)
-    os.chdir(_PROJECT_DIR)  # exe: 작업 폴더를 exe 위치로 (base_library.zip\.wdm 오류 방지)
+    os.chdir(_PROJECT_DIR)  # exe: ìì í´ëë¥¼ exe ìì¹ë¡ (base_library.zip\.wdm ì¤ë¥ ë°©ì§)
 else:
     _PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# ChromeDriver/EdgeDriver 캐시를 exe(또는 스크립트) 폴더로만 사용 (base_library.zip\.wdm 오류 방지)
+# ChromeDriver/EdgeDriver ìºìë¥¼ exe(ëë ì¤í¬ë¦½í¸) í´ëë¡ë§ ì¬ì© (base_library.zip\.wdm ì¤ë¥ ë°©ì§)
 _WDM_CACHE = os.path.join(_PROJECT_DIR, "wdm_drivers")
 os.makedirs(_WDM_CACHE, exist_ok=True)
 os.environ["WDM_SSL_VERIFY"] = "0"
-# exe 실행 시 WDM_LOCAL 설정 금지: WDM_LOCAL=1이면 webdriver_manager가 sys.path[0]/.wdm 사용 → PyInstaller에서 base_library.zip\.wdm 오류
+# exe ì¤í ì WDM_LOCAL ì¤ì  ê¸ì§: WDM_LOCAL=1ì´ë©´ webdriver_managerê° sys.path[0]/.wdm ì¬ì© â PyInstallerìì base_library.zip\.wdm ì¤ë¥
 if not getattr(sys, "frozen", False):
     os.environ["WDM_LOCAL"] = "1"
 from datetime import datetime
@@ -36,13 +36,13 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-# 사용할 브라우저: "edge" | "chrome"
+# ì¬ì©í  ë¸ë¼ì°ì : "edge" | "chrome"
 BROWSER = "chrome"
 
-# EdgeDriver 수동 경로 (필요 시 환경변수 EDGE_DRIVER_PATH 또는 여기 지정)
+# EdgeDriver ìë ê²½ë¡ (íì ì íê²½ë³ì EDGE_DRIVER_PATH ëë ì¬ê¸° ì§ì )
 EDGE_DRIVER_PATH = os.environ.get("EDGE_DRIVER_PATH", "")
 
-# Chrome 로봇 감지 우회 (undetected-chromedriver). exe 실행 시에는 비활성화(캐시 경로 오류 방지)
+# Chrome ë¡ë´ ê°ì§ ì°í (undetected-chromedriver). exe ì¤í ììë ë¹íì±í(ìºì ê²½ë¡ ì¤ë¥ ë°©ì§)
 USE_UNDETECTED = False
 if BROWSER == "chrome" and not getattr(sys, "frozen", False):
     try:
@@ -64,36 +64,36 @@ except Exception:
     _WDM_CACHE_MANAGER = None
 
 
-# 에어비앤비 크롤링 대상
+# ìì´ë¹ì¤ë¹ í¬ë¡¤ë§ ëì
 AIRBNB_HOME_URL = "https://www.airbnb.co.kr/homes"
 AIRBNB_BASE = "https://www.airbnb.co.kr"
 
-# 크롤링 최대 페이지 수 (1~3)
+# í¬ë¡¤ë§ ìµë íì´ì§ ì (1~3)
 MAX_PAGES = 3
 
-# 브라우저/드라이버 (속도·봇 감지 균형)
+# ë¸ë¼ì°ì /ëë¼ì´ë² (ìëÂ·ë´ ê°ì§ ê· í)
 IMPLICIT_WAIT_SEC = 3
 WINDOW_SIZE = (1920, 1080)
-# 지연 시간 (봇 감지 우회, 문서 권장 범위 내)
+# ì§ì° ìê° (ë´ ê°ì§ ì°í, ë¬¸ì ê¶ì¥ ë²ì ë´)
 DELAY_FIRST_PAGE_SEC = 2.0
 DELAY_NEXT_PAGE_AFTER_CLICK_SEC = 1.0
 DELAY_BETWEEN_PAGES_SEC = 1.0
 
-# 제공 HTML 구조 기준 (카드 내 data-testid 사용으로 정확·빠름)
+# ì ê³µ HTML êµ¬ì¡° ê¸°ì¤ (ì¹´ë ë´ data-testid ì¬ì©ì¼ë¡ ì íÂ·ë¹ ë¦)
 LISTING_LINK_SELECTOR = 'a[href*="/rooms/"][aria-labelledby^="title_"]'
-# 가격: 가격 전용 스타일만 사용 (속도 개선)
-PRICE_ROW_SELECTOR = '[data-testid="price-availability-row"]'  # 카드 찾기용
-PRICE_SPAN_STYLE = 'span[style*="pricing-guest-primary-line-unit-price"]'  # ₩159,765 전용
-# 평점/리뷰: 동일 카드 내 span[aria-hidden="true"] 중 "4.87 (23)" 형태 또는 "평점 N점, 후기 N개" span
-RATING_SPAN_ARIA_HIDDEN = 'span[aria-hidden="true"]'  # 텍스트 예: "5.0 (29)"
-RATING_SPAN_CONTAINS = "평점"  # "평점 5.0점(5점 만점), 후기 29개"
-# 주소/위치
+# ê°ê²©: ê°ê²© ì ì© ì¤íì¼ë§ ì¬ì© (ìë ê°ì )
+PRICE_ROW_SELECTOR = '[data-testid="price-availability-row"]'  # ì¹´ë ì°¾ê¸°ì©
+PRICE_SPAN_STYLE = 'span[style*="pricing-guest-primary-line-unit-price"]'  # â©159,765 ì ì©
+# íì /ë¦¬ë·°: ëì¼ ì¹´ë ë´ span[aria-hidden="true"] ì¤ "4.87 (23)" íí ëë "íì  Nì , íê¸° Nê°" span
+RATING_SPAN_ARIA_HIDDEN = 'span[aria-hidden="true"]'  # íì¤í¸ ì: "5.0 (29)"
+RATING_SPAN_CONTAINS = "íì "  # "íì  5.0ì (5ì  ë§ì ), íê¸° 29ê°"
+# ì£¼ì/ìì¹
 ADDRESS_SELECTORS = [
     '[data-testid="listing-card-subtitle"]',
     '[data-testid="listing-card-location"]',
 ]
 
-# 고속 수집: execute_script 1회로 카드 전체 수집 (페이지당 1번 왕복)
+# ê³ ì ìì§: execute_script 1íë¡ ì¹´ë ì ì²´ ìì§ (íì´ì§ë¹ 1ë² ìë³µ)
 _FAST_SCRAPE_SCRIPT = """
 var base = "https://www.airbnb.co.kr";
 var links = document.querySelectorAll('a[href*="/rooms/"][aria-labelledby^="title_"]');
@@ -133,30 +133,30 @@ for (var i = 0; i < links.length; i++) {
     var titleEl = card.querySelector('[data-testid="listing-card-title"]') || card.querySelector("h2");
     if (titleEl) title = (titleEl.textContent || "").trim();
   }
-  if (!title) title = "(숙소명 없음)";
+  if (!title) title = "(ììëª ìì)";
   var price = "", rating = "", address = "";
   function onlyTotalAmount(str) {
-    if (!str || str.indexOf("₩") === -1) return "";
-    var m = str.match(/총액\\s*(₩[\\d,]+)/);
+    if (!str || str.indexOf("â©") === -1) return "";
+    var m = str.match(/ì´ì¡\\s*(â©[\\d,]+)/);
     if (m) return m[1];
-    if (str.indexOf("원래 요금") !== -1) {
-      var before = str.split("원래 요금")[0].trim();
-      m = before.match(/₩[\\d,]+/);
+    if (str.indexOf("ìë ìê¸") !== -1) {
+      var before = str.split("ìë ìê¸")[0].trim();
+      m = before.match(/â©[\\d,]+/);
       return m ? m[0] : "";
     }
-    m = str.match(/₩[\\d,]+/);
+    m = str.match(/â©[\\d,]+/);
     return m ? m[0] : "";
   }
   if (card) {
-    var ps = card.querySelectorAll('[data-testid="price-availability-row"] span[aria-label*="총액"]');
+    var ps = card.querySelectorAll('[data-testid="price-availability-row"] span[aria-label*="ì´ì¡"]');
     for (var j = 0; j < ps.length; j++) {
       var label = (ps[j].getAttribute("aria-label") || "").trim();
       if (label) { price = onlyTotalAmount(label); if (price) break; }
       var txt = (ps[j].textContent || "").trim();
-      if (/^₩[\\d,]+$/.test(txt)) { price = txt; break; }
+      if (/^â©[\\d,]+$/.test(txt)) { price = txt; break; }
     }
     if (!price) {
-      ps = card.querySelectorAll('span[aria-label*="총액"]');
+      ps = card.querySelectorAll('span[aria-label*="ì´ì¡"]');
       for (var j = 0; j < ps.length; j++) {
         var label = (ps[j].getAttribute("aria-label") || "").trim();
         if (label) { price = onlyTotalAmount(label); if (price) break; }
@@ -169,8 +169,8 @@ for (var i = 0; i < links.length; i++) {
         for (var j = 0; j < spans.length; j++) {
           var lbl = (spans[j].getAttribute("aria-label") || "").trim();
           var txt = (spans[j].textContent || "").trim();
-          if (/^₩[\\d,]+$/.test(txt)) {
-            if (lbl.indexOf("원래 요금") !== -1 && onlyTotalAmount(lbl) === "") continue;
+          if (/^â©[\\d,]+$/.test(txt)) {
+            if (lbl.indexOf("ìë ìê¸") !== -1 && onlyTotalAmount(lbl) === "") continue;
             price = txt; break;
           }
           price = onlyTotalAmount(lbl || txt);
@@ -182,14 +182,14 @@ for (var i = 0; i < links.length; i++) {
       var sp = card.querySelectorAll('span[style*="pricing-guest-primary-line-unit-price"]');
       for (var j = 0; j < sp.length; j++) {
         var txt = (sp[j].textContent || "").trim();
-        if (/^₩[\\d,]+$/.test(txt)) { price = txt; break; }
+        if (/^â©[\\d,]+$/.test(txt)) { price = txt; break; }
       }
     }
     if (!price) {
       var u = card.querySelector("span.u174bpcy");
       if (u) {
         var txt = (u.textContent || "").trim();
-        if (/^₩[\\d,]+$/.test(txt)) price = txt;
+        if (/^â©[\\d,]+$/.test(txt)) price = txt;
       }
     }
     var rs = card.querySelectorAll('.t1phmnpa span[aria-hidden="true"]');
@@ -215,7 +215,7 @@ for (var i = 0; i < links.length; i++) {
       var all = card.querySelectorAll("span");
       for (var j = 0; j < all.length; j++) {
         t = (all[j].textContent || "").trim();
-        if (t.indexOf("평점") !== -1 && t.indexOf("후기") !== -1 && t.length < 80) { rating = t; break; }
+        if (t.indexOf("íì ") !== -1 && t.indexOf("íê¸°") !== -1 && t.length < 80) { rating = t; break; }
       }
     }
     if (card) {
@@ -264,7 +264,7 @@ USER_AGENT_CHROME = (
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
-# 로봇 감지 우회 CDP 스크립트
+# ë¡ë´ ê°ì§ ì°í CDP ì¤í¬ë¦½í¸
 STEALTH_SCRIPT = """
 Object.defineProperty(navigator, 'webdriver', { get: function() { return undefined; } });
 Object.defineProperty(navigator, 'languages', { get: function() { return ['ko-KR', 'ko', 'en-US', 'en']; } });
@@ -280,7 +280,7 @@ def _apply_stealth(driver: WebDriver) -> None:
 
 
 def create_driver(headless: bool = False):
-    """Edge 또는 Chrome 드라이버 생성"""
+    """Edge ëë Chrome ëë¼ì´ë² ìì±"""
     if BROWSER == "edge":
         options = EdgeOptions()
         if headless:
@@ -305,7 +305,7 @@ def create_driver(headless: bool = False):
                 driver = webdriver.Edge(service=service, options=options)
             except Exception as e:
                 if "Connection" in str(type(e).__name__) or "getaddrinfo" in str(e).lower():
-                    print("EdgeDriver 자동 다운로드 실패. Selenium 내장 방식으로 시도...")
+                    print("EdgeDriver ìë ë¤ì´ë¡ë ì¤í¨. Selenium ë´ì¥ ë°©ìì¼ë¡ ìë...")
                 driver = webdriver.Edge(options=options)
         _apply_stealth(driver)
     else:
@@ -342,19 +342,19 @@ def create_driver(headless: bool = False):
 
 
 def open_airbnb_page(driver: WebDriver) -> bool:
-    """에어비앤비 홈(숙소 목록) 페이지로 이동"""
+    """ìì´ë¹ì¤ë¹ í(ìì ëª©ë¡) íì´ì§ë¡ ì´ë"""
     driver.get(AIRBNB_HOME_URL)
     time.sleep(DELAY_FIRST_PAGE_SEC)
     return True
 
 
 def accept_cookie_if_any(driver: WebDriver) -> None:
-    """쿠키/동의 팝업 버튼이 있으면 클릭"""
+    """ì¿ í¤/ëì íì ë²í¼ì´ ìì¼ë©´ í´ë¦­"""
     selectors = [
         'button[data-testid="accept-cookie-banner"]',
-        'button:contains("동의"), button:contains("Accept")',
+        'button:contains("ëì"), button:contains("Accept")',
         'a[href*="cookie"]',
-        '[aria-label*="동의"], [aria-label*="Accept"]',
+        '[aria-label*="ëì"], [aria-label*="Accept"]',
         'button[class*="accept"], button[class*="agree"]',
     ]
     for sel in selectors:
@@ -370,14 +370,14 @@ def accept_cookie_if_any(driver: WebDriver) -> None:
             continue
 
 
-# 평점/리뷰 텍스트 패턴: "4.87 (23)" 또는 "5.0 (29)"
+# íì /ë¦¬ë·° íì¤í¸ í¨í´: "4.87 (23)" ëë "5.0 (29)"
 RATING_PATTERN = re.compile(r"^\d\.?\d*\s*\(\d+\)\s*$")
-# 카드 내 평점 형태 검색용 (텍스트 일부에서 추출)
+# ì¹´ë ë´ íì  íí ê²ìì© (íì¤í¸ ì¼ë¶ìì ì¶ì¶)
 RATING_IN_TEXT = re.compile(r"\d\.?\d*\s*\(\d+\)")
 
 
 def _get_card_container(link_el):
-    """링크에 속한 카드. listing-card → card-container → price-availability-row 포함 조상."""
+    """ë§í¬ì ìí ì¹´ë. listing-card â card-container â price-availability-row í¬í¨ ì¡°ì."""
     try:
         el = link_el
         for _ in range(20):
@@ -416,22 +416,22 @@ def _get_card_container(link_el):
     return None
 
 
-# 가격: aria-label/텍스트에서 총액(첫 번째 ₩숫자)만 추출
-_PRICE_TOTAL_PATTERN = re.compile(r"총액\s*(₩[\d,]+)")
-_PRICE_AMOUNT_ONLY = re.compile(r"^₩[\d,]+$")
-_PRICE_FIRST_AMOUNT = re.compile(r"₩[\d,]+")
+# ê°ê²©: aria-label/íì¤í¸ìì ì´ì¡(ì²« ë²ì§¸ â©ì«ì)ë§ ì¶ì¶
+_PRICE_TOTAL_PATTERN = re.compile(r"ì´ì¡\s*(â©[\d,]+)")
+_PRICE_AMOUNT_ONLY = re.compile(r"^â©[\d,]+$")
+_PRICE_FIRST_AMOUNT = re.compile(r"â©[\d,]+")
 
 
 def _price_only_total(raw: str) -> str:
-    """총액/실제 표시 금액만. '총액 ₩1,155,213, 원래 요금 ₩1,264,913'→'₩1,155,213'. '₩679,000 · 5박, 원래 요금 ₩920,957'→'₩679,000'(원래 요금 앞 금액)."""
-    if not raw or "₩" not in raw:
+    """ì´ì¡/ì¤ì  íì ê¸ì¡ë§. 'ì´ì¡ â©1,155,213, ìë ìê¸ â©1,264,913'â'â©1,155,213'. 'â©679,000 Â· 5ë°, ìë ìê¸ â©920,957'â'â©679,000'(ìë ìê¸ ì ê¸ì¡)."""
+    if not raw or "â©" not in raw:
         return ""
     s = (raw or "").strip().rstrip(",").strip()
     m = _PRICE_TOTAL_PATTERN.search(s)
     if m:
         return m.group(1).strip()
-    if "원래 요금" in s:
-        before = s.split("원래 요금")[0].strip()
+    if "ìë ìê¸" in s:
+        before = s.split("ìë ìê¸")[0].strip()
         m = _PRICE_FIRST_AMOUNT.search(before)
         return m.group(0).strip() if m else ""
     if _PRICE_AMOUNT_ONLY.match(s):
@@ -441,14 +441,14 @@ def _price_only_total(raw: str) -> str:
 
 
 def _get_price_from_card(card) -> str:
-    """카드 내 가격 추출. 총액(₩숫자)만 반환. aria-label 총액 우선 → price-row → u174bpcy/스타일 span."""
+    """ì¹´ë ë´ ê°ê²© ì¶ì¶. ì´ì¡(â©ì«ì)ë§ ë°í. aria-label ì´ì¡ ì°ì  â price-row â u174bpcy/ì¤íì¼ span."""
     if not card:
         return ""
     try:
-        # 1) price-availability-row 내 span[aria-label*="총액"] → 총액만
+        # 1) price-availability-row ë´ span[aria-label*="ì´ì¡"] â ì´ì¡ë§
         try:
             row = card.find_element(By.CSS_SELECTOR, PRICE_ROW_SELECTOR)
-            for span in row.find_elements(By.CSS_SELECTOR, 'span[aria-label*="총액"]'):
+            for span in row.find_elements(By.CSS_SELECTOR, 'span[aria-label*="ì´ì¡"]'):
                 label = (span.get_attribute("aria-label") or "").strip()
                 if label:
                     p = _price_only_total(label)
@@ -461,13 +461,13 @@ def _get_price_from_card(card) -> str:
                 txt = (span.text or "").strip()
                 if _PRICE_AMOUNT_ONLY.match(txt):
                     label = (span.get_attribute("aria-label") or "").strip()
-                    if "원래 요금" in label and not _price_only_total(label):
+                    if "ìë ìê¸" in label and not _price_only_total(label):
                         continue
                     return txt
         except Exception:
             pass
-        # 2) 카드 전체 span[aria-label*="총액"] → 총액만
-        for span in card.find_elements(By.CSS_SELECTOR, 'span[aria-label*="총액"]'):
+        # 2) ì¹´ë ì ì²´ span[aria-label*="ì´ì¡"] â ì´ì¡ë§
+        for span in card.find_elements(By.CSS_SELECTOR, 'span[aria-label*="ì´ì¡"]'):
             label = (span.get_attribute("aria-label") or "").strip()
             if label:
                 p = _price_only_total(label)
@@ -476,7 +476,7 @@ def _get_price_from_card(card) -> str:
             txt = (span.text or "").strip()
             if _PRICE_AMOUNT_ONLY.match(txt):
                 return txt
-        # 3) span.u174bpcy / 스타일 span → 텍스트가 ₩숫자만 일 때만
+        # 3) span.u174bpcy / ì¤íì¼ span â íì¤í¸ê° â©ì«ìë§ ì¼ ëë§
         for span in card.find_elements(By.CSS_SELECTOR, "span[class*='u174bpcy']"):
             txt = (span.text or "").strip().rstrip(",").strip()
             if _PRICE_AMOUNT_ONLY.match(txt):
@@ -485,19 +485,19 @@ def _get_price_from_card(card) -> str:
             txt = (span.text or "").strip().rstrip(",").strip()
             if _PRICE_AMOUNT_ONLY.match(txt):
                 return txt
-        # 4) 그 외 ₩ 포함 span (원래 요금만 있는 span 제외, '원래 요금' 앞 금액 또는 span 텍스트 사용)
+        # 4) ê·¸ ì¸ â© í¬í¨ span (ìë ìê¸ë§ ìë span ì ì¸, 'ìë ìê¸' ì ê¸ì¡ ëë span íì¤í¸ ì¬ì©)
         for span in card.find_elements(By.CSS_SELECTOR, "span"):
             txt = (span.text or "").strip()
             if _PRICE_AMOUNT_ONLY.match(txt):
                 label = (span.get_attribute("aria-label") or "").strip()
-                if "원래 요금" in label and not _price_only_total(label):
+                if "ìë ìê¸" in label and not _price_only_total(label):
                     continue
                 return txt
         for el in card.find_elements(By.CSS_SELECTOR, "[class*='price'], [class*='Price']"):
             txt = (el.text or "").strip()
             if _PRICE_AMOUNT_ONLY.match(txt):
                 label = (el.get_attribute("aria-label") or "").strip()
-                if "원래 요금" in label and not _price_only_total(label):
+                if "ìë ìê¸" in label and not _price_only_total(label):
                     continue
                 return txt
     except Exception:
@@ -506,39 +506,39 @@ def _get_price_from_card(card) -> str:
 
 
 def _get_rating_from_card(card) -> str:
-    """카드 내 평점/리뷰 추출. .t1phmnpa span[aria-hidden], span.a8jt5op(참고 표) → aria-hidden → 평점/후기 텍스트."""
+    """ì¹´ë ë´ íì /ë¦¬ë·° ì¶ì¶. .t1phmnpa span[aria-hidden], span.a8jt5op(ì°¸ê³  í) â aria-hidden â íì /íê¸° íì¤í¸."""
     if not card:
         return ""
     try:
-        # 1) .t1phmnpa span[aria-hidden="true"] (참고 표)
+        # 1) .t1phmnpa span[aria-hidden="true"] (ì°¸ê³  í)
         for span in card.find_elements(By.CSS_SELECTOR, ".t1phmnpa span[aria-hidden='true']"):
             t = (span.text or "").strip()
             if RATING_PATTERN.match(t):
                 return t
-        # 2) span.a8jt5op (참고 표)
+        # 2) span.a8jt5op (ì°¸ê³  í)
         for span in card.find_elements(By.CSS_SELECTOR, "span[class*='a8jt5op']"):
             t = (span.text or "").strip()
             if t and len(t) < 30:
                 return t
-        # 3) aria-hidden="true" span 중 "4.87 (23)" 형태
+        # 3) aria-hidden="true" span ì¤ "4.87 (23)" íí
         for span in card.find_elements(By.CSS_SELECTOR, RATING_SPAN_ARIA_HIDDEN):
             t = (span.text or "").strip()
             if RATING_PATTERN.match(t):
                 return t
-        # 4) "평점 N점, 후기 N개" 포함 span
+        # 4) "íì  Nì , íê¸° Nê°" í¬í¨ span
         for span in card.find_elements(By.CSS_SELECTOR, "span"):
             t = (span.text or "").strip()
-            if RATING_SPAN_CONTAINS in t and "후기" in t and len(t) < 80:
+            if RATING_SPAN_CONTAINS in t and "íê¸°" in t and len(t) < 80:
                 return t
-        # 5) 카드 전체 텍스트에서 "4.87 (23)" 패턴 검색
+        # 5) ì¹´ë ì ì²´ íì¤í¸ìì "4.87 (23)" í¨í´ ê²ì
         full_text = (card.text or "").strip()
         m = RATING_IN_TEXT.search(full_text)
         if m:
             return m.group(0).strip()
-        # 6) "점" + "후기" 형태
+        # 6) "ì " + "íê¸°" íí
         for span in card.find_elements(By.CSS_SELECTOR, "span"):
             t = (span.text or "").strip()
-            if "점" in t and "후기" in t and len(t) < 80:
+            if "ì " in t and "íê¸°" in t and len(t) < 80:
                 return t
     except Exception:
         pass
@@ -546,7 +546,7 @@ def _get_rating_from_card(card) -> str:
 
 
 def _get_address_from_element(container) -> str:
-    """컨테이너 내 주소/위치. 모든 listing-card-subtitle 텍스트 합침(표시 형식) → listing-card-location."""
+    """ì»¨íì´ë ë´ ì£¼ì/ìì¹. ëª¨ë  listing-card-subtitle íì¤í¸ í©ì¹¨(íì íì) â listing-card-location."""
     if not container:
         return ""
     try:
@@ -571,12 +571,12 @@ def _get_address_from_element(container) -> str:
 
 
 def _get_address_from_card(card) -> str:
-    """카드 내 주소/위치 추출. listing-card-subtitle → listing-card-location 순."""
+    """ì¹´ë ë´ ì£¼ì/ìì¹ ì¶ì¶. listing-card-subtitle â listing-card-location ì."""
     return _get_address_from_element(card)
 
 
 def _get_address_near_link(link_el) -> str:
-    """링크의 조상에서 주소/위치 요소 탐색 (카드가 좁을 때 누락 방지)."""
+    """ë§í¬ì ì¡°ììì ì£¼ì/ìì¹ ìì íì (ì¹´ëê° ì¢ì ë ëë½ ë°©ì§)."""
     try:
         el = link_el
         for _ in range(20):
@@ -593,15 +593,81 @@ def _get_address_near_link(link_el) -> str:
     return ""
 
 
+# ìì¸ íì´ì§ ì§ë ë§ì»¤ìì ì¢í(ìë, ê²½ë) ì¶ì¶ì© í¨í´
+_COORD_POSITION_PATTERN = re.compile(r"^\s*([+-]?\d+(?:\.\d+)?)\s*,\s*([+-]?\d+(?:\.\d+)?)\s*$")
+
+
+def _extract_coords_from_position(position: str) -> tuple[str, str]:
+    """gmp-advanced-marker position ë¬¸ìì´('35.163,129.1585')ìì ìëÂ·ê²½ëë§ ë¶ë¦¬."""
+    if not position:
+        return "", ""
+    m = _COORD_POSITION_PATTERN.match(position.strip())
+    if not m:
+        return "", ""
+    return m.group(1), m.group(2)
+
+
+def get_listing_coordinates(driver: WebDriver, timeout: float = 5.0) -> tuple[str, str]:
+    """ìì¸ íì´ì§ìì gmp-advanced-marker[position] ììë¡ ì¢í(ìë,ê²½ë) ì¶ì¶."""
+    elems: list[WebDriver] = []
+    try:
+        elems = WebDriverWait(driver, timeout).until(
+            lambda d: d.find_elements(By.CSS_SELECTOR, "gmp-advanced-marker[position]")
+        )
+    except Exception:
+        try:
+            elems = driver.find_elements(By.CSS_SELECTOR, "gmp-advanced-marker[position]")
+        except Exception:
+            elems = []
+    for el in elems:
+        try:
+            pos = (el.get_attribute("position") or "").strip()
+            lat, lng = _extract_coords_from_position(pos)
+            if lat and lng:
+                return lat, lng
+        except Exception:
+            continue
+    return "", ""
+
+
+def enrich_listings_with_coordinates(
+    driver: WebDriver,
+    listings: list[dict],
+    max_items: int | None = None,
+) -> int:
+    """ê° ìì ë§í¬ ìì¸ íì´ì§ìì ì¢íë¥¼ ìì§í´ listingsì lat/lng íëë¥¼ ì¶ê°. ì±ê³µ ê°ì ë°í."""
+    count = 0
+    for item in listings:
+        if max_items is not None and count >= max_items:
+            break
+        if item.get("lat") and item.get("lng"):
+            continue
+        link = (item.get("link") or "").strip()
+        if not link:
+            continue
+        try:
+            driver.get(link)
+            # ìì¸ íì´ì§ ë¡ë© ì¬ì 
+            time.sleep(1.0)
+            lat, lng = get_listing_coordinates(driver)
+            if lat and lng:
+                item["lat"] = lat
+                item["lng"] = lng
+                count += 1
+        except Exception:
+            continue
+    return count
+
+
 def get_airbnb_listings(driver: WebDriver) -> list[dict]:
-    """현재 페이지 숙소 수집. 고속 수집(execute_script 1회) 우선, 실패 시 SELECTORS fallback."""
-    # 고속 수집: 1회 스크립트로 전체 카드 반환 (페이지당 1번 왕복)
+    """íì¬ íì´ì§ ìì ìì§. ê³ ì ìì§(execute_script 1í) ì°ì , ì¤í¨ ì SELECTORS fallback."""
+    # ê³ ì ìì§: 1í ì¤í¬ë¦½í¸ë¡ ì ì²´ ì¹´ë ë°í (íì´ì§ë¹ 1ë² ìë³µ)
     try:
         raw = driver.execute_script(_FAST_SCRAPE_SCRIPT)
         if raw and isinstance(raw, list) and len(raw) > 0:
             return [
                 {
-                    "title": (x.get("title") or "").strip() or "(숙소명 없음)",
+                    "title": (x.get("title") or "").strip() or "(ììëª ìì)",
                     "price": (x.get("price") or "").strip().rstrip(",").strip(),
                     "rating": (x.get("rating") or "").strip(),
                     "address": (x.get("address") or "").strip(),
@@ -613,7 +679,7 @@ def get_airbnb_listings(driver: WebDriver) -> list[dict]:
     except Exception:
         pass
 
-    # Fallback: SELECTORS로 카드·제목·가격·평점 요소별 수집
+    # Fallback: SELECTORSë¡ ì¹´ëÂ·ì ëª©Â·ê°ê²©Â·íì  ììë³ ìì§
     results = []
     seen_links = set()
     try:
@@ -654,7 +720,7 @@ def get_airbnb_listings(driver: WebDriver) -> list[dict]:
                 except Exception:
                     pass
             if not title:
-                title = "(숙소명 없음)"
+                title = "(ììëª ìì)"
 
             price = _get_price_from_card(card) if card else ""
             price = (price or "").strip().rstrip(",").strip()
@@ -677,14 +743,14 @@ def get_airbnb_listings(driver: WebDriver) -> list[dict]:
 
 
 def save_listings_to_excel(listings: list[dict], filepath: str | None = None) -> str:
-    """수집된 숙소 목록을 엑셀 파일로 저장. 저장 경로 반환."""
+    """ìì§ë ìì ëª©ë¡ì ìì íì¼ë¡ ì ì¥. ì ì¥ ê²½ë¡ ë°í."""
     if filepath is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"airbnb_listings_{timestamp}.xlsx")
     wb = Workbook()
     ws = wb.active
-    ws.title = "숙소 목록"
-    headers = ["번호", "숙소명", "가격", "평점/후기", "주소/위치", "링크"]
+    ws.title = "ìì ëª©ë¡"
+    headers = ["ë²í¸", "ììëª", "ê°ê²©", "íì /íê¸°", "ì£¼ì/ìì¹", "ìë", "ê²½ë", "ë§í¬"]
     for col, h in enumerate(headers, 1):
         ws.cell(row=1, column=col, value=h)
     for row, item in enumerate(listings, 2):
@@ -693,34 +759,38 @@ def save_listings_to_excel(listings: list[dict], filepath: str | None = None) ->
         ws.cell(row=row, column=3, value=item.get("price", ""))
         ws.cell(row=row, column=4, value=item.get("rating", ""))
         ws.cell(row=row, column=5, value=item.get("address", ""))
-        ws.cell(row=row, column=6, value=item.get("link", ""))
-    for col in range(1, 7):
+        ws.cell(row=row, column=6, value=item.get("lat", ""))
+        ws.cell(row=row, column=7, value=item.get("lng", ""))
+        ws.cell(row=row, column=8, value=item.get("link", ""))
+    for col in range(1, 9):
         ws.column_dimensions[get_column_letter(col)].width = 20
     ws.column_dimensions["B"].width = 40
     ws.column_dimensions["E"].width = 30
-    ws.column_dimensions["F"].width = 60
-    # 첫 행 고정 (스크롤 시 헤더 고정)
+    ws.column_dimensions["F"].width = 14
+    ws.column_dimensions["G"].width = 14
+    ws.column_dimensions["H"].width = 60
+    # ì²« í ê³ ì  (ì¤í¬ë¡¤ ì í¤ë ê³ ì )
     ws.freeze_panes = "A2"
-    # 모든 셀 가운데 정렬
+    # ëª¨ë  ì ê°ì´ë° ì ë ¬
     center = Alignment(horizontal="center", vertical="center", wrap_text=True)
     last_row = len(listings) + 1
     for row in range(1, last_row + 1):
-        for col in range(1, 7):
+        for col in range(1, 9):
             ws.cell(row=row, column=col).alignment = center
     wb.save(filepath)
     return filepath
 
 
 def go_to_next_page(driver: WebDriver) -> bool:
-    """다음 페이지로 이동 (다음 버튼 클릭 또는 URL 변경). 성공 시 True."""
-    # 에어비앤비: 다음 버튼/링크 선택자 (여러 후보 시도)
+    """ë¤ì íì´ì§ë¡ ì´ë (ë¤ì ë²í¼ í´ë¦­ ëë URL ë³ê²½). ì±ê³µ ì True."""
+    # ìì´ë¹ì¤ë¹: ë¤ì ë²í¼/ë§í¬ ì íì (ì¬ë¬ íë³´ ìë)
     next_selectors = [
-        ('css', 'a[aria-label="다음"]'),
+        ('css', 'a[aria-label="ë¤ì"]'),
         ('css', 'a[aria-label="Next"]'),
         ('css', '[data-testid="pagination-next"]'),
         ('css', 'a[href*="items_offset"]'),
-        ('xpath', '//a[contains(@aria-label,"다음") or contains(@aria-label,"Next")]'),
-        ('xpath', '//button[contains(text(),"다음") or contains(text(),"Next")]'),
+        ('xpath', '//a[contains(@aria-label,"ë¤ì") or contains(@aria-label,"Next")]'),
+        ('xpath', '//button[contains(text(),"ë¤ì") or contains(text(),"Next")]'),
     ]
     for kind, sel in next_selectors:
         try:
@@ -740,17 +810,17 @@ def go_to_next_page(driver: WebDriver) -> bool:
 def main():
     driver = None
     try:
-        print(f"{'Edge' if BROWSER == 'edge' else 'Chrome'} 브라우저 시작..." + (" (로봇 감지 우회)" if USE_UNDETECTED else ""))
+        print(f"{'Edge' if BROWSER == 'edge' else 'Chrome'} ë¸ë¼ì°ì  ìì..." + (" (ë¡ë´ ê°ì§ ì°í)" if USE_UNDETECTED else ""))
         driver = create_driver(headless=False)
         time.sleep(1)
 
-        print("에어비앤비 홈페이지 열기...")
+        print("ìì´ë¹ì¤ë¹ ííì´ì§ ì´ê¸°...")
         open_airbnb_page(driver)
 
-        input("\n>>> 검색/필터 후 원하는 목록이 보이면, 여기 터미널에서 엔터를 누르면 크롤링을 시작합니다.\n")
+        input("\n>>> ê²ì/íí° í ìíë ëª©ë¡ì´ ë³´ì´ë©´, ì¬ê¸° í°ë¯¸ëìì ìí°ë¥¼ ëë¥´ë©´ í¬ë¡¤ë§ì ììí©ëë¤.\n")
 
         current_url = driver.current_url
-        print(f"현재 페이지: {current_url[:90]}{'...' if len(current_url) > 90 else ''}\n")
+        print(f"íì¬ íì´ì§: {current_url[:90]}{'...' if len(current_url) > 90 else ''}\n")
 
         accept_cookie_if_any(driver)
         time.sleep(0.3)
@@ -759,7 +829,7 @@ def main():
         seen_links = set()
 
         for page_num in range(MAX_PAGES):
-            print(f"숙소 목록 수집 중... ({page_num + 1}/{MAX_PAGES}페이지)")
+            print(f"ìì ëª©ë¡ ìì§ ì¤... ({page_num + 1}/{MAX_PAGES}íì´ì§)")
             page_listings = get_airbnb_listings(driver)
             for item in page_listings:
                 link = item.get("link", "")
@@ -767,50 +837,61 @@ def main():
                     seen_links.add(link)
                     all_listings.append(item)
             if page_num < MAX_PAGES - 1 and not go_to_next_page(driver):
-                print(f"다음 페이지가 없어 {page_num + 1}페이지까지 수집했습니다.")
+                print(f"ë¤ì íì´ì§ê° ìì´ {page_num + 1}íì´ì§ê¹ì§ ìì§íìµëë¤.")
                 break
             time.sleep(DELAY_BETWEEN_PAGES_SEC)
 
         if not all_listings:
-            print("수집된 숙소가 없습니다. 페이지가 완전히 로드된 뒤 다시 엔터를 눌러 보세요.")
+            print("ìì§ë ììê° ììµëë¤. íì´ì§ê° ìì í ë¡ëë ë¤ ë¤ì ìí°ë¥¼ ëë¬ ë³´ì¸ì.")
         else:
-            print(f"\n수집된 숙소: {len(all_listings)}개 (최대 {MAX_PAGES}페이지)\n")
+            print(f"\nìì§ë ìì: {len(all_listings)}ê° (ìµë {MAX_PAGES}íì´ì§)\n")
+
+            # ìì¸ íì´ì§ìì ì¢í(ìëÂ·ê²½ë) ì¶ê° ìì§
+            try:
+                print("ìì ì¢í(ìëÂ·ê²½ë) ìì§ ì¤... (ìì¸ íì´ì§ ë°©ë¬¸)")
+                added = enrich_listings_with_coordinates(driver, all_listings)
+                print(f"ì¢íê° ì¶ê°ë ìì: {added}ê°\n")
+            except Exception as e:
+                print(f"ì¢í ìì§ ì¤ ì¤ë¥ ë°ì: {e}\n")
+
             for i, item in enumerate(all_listings, 1):
                 print(f"[{i}] {item['title']}")
                 if item.get("price"):
-                    print(f"    가격: {item['price']}")
+                    print(f"    ê°ê²©: {item['price']}")
                 if item.get("rating"):
-                    print(f"    평점/후기: {item['rating']}")
+                    print(f"    íì /íê¸°: {item['rating']}")
                 if item.get("address"):
-                    print(f"    주소/위치: {item['address']}")
-                print(f"    링크: {item['link']}\n")
+                    print(f"    ì£¼ì/ìì¹: {item['address']}")
+                if item.get("lat") and item.get("lng"):
+                    print(f"    ì¢í: {item['lat']}, {item['lng']}")
+                print(f"    ë§í¬: {item['link']}\n")
 
             excel_path = save_listings_to_excel(all_listings)
-            print(f"엑셀 저장 완료: {excel_path}")
+            print(f"ìì ì ì¥ ìë£: {excel_path}")
 
-        input("엔터를 누르면 브라우저를 종료합니다...")
+        input("ìí°ë¥¼ ëë¥´ë©´ ë¸ë¼ì°ì ë¥¼ ì¢ë£í©ëë¤...")
     finally:
         if driver:
             driver.quit()
-            print("브라우저 종료됨.")
+            print("ë¸ë¼ì°ì  ì¢ë£ë¨.")
 
 
 if __name__ == "__main__":
-    # 크롤링 버튼이 있는 GUI 실행 (콘솔만 쓰려면: python main.py --console)
+    # í¬ë¡¤ë§ ë²í¼ì´ ìë GUI ì¤í (ì½ìë§ ì°ë ¤ë©´: python main.py --console)
     if "--console" not in sys.argv:
         try:
             import gui_app
             gui_app.main()
         except Exception as e:
-            print(f"\nGUI 오류: {e}")
+            print(f"\nGUI ì¤ë¥: {e}")
             import traceback
             traceback.print_exc()
-            input("\n엔터를 누르면 종료합니다...")
+            input("\nìí°ë¥¼ ëë¥´ë©´ ì¢ë£í©ëë¤...")
     else:
         try:
             main()
         except Exception as e:
-            print(f"\n오류 발생: {e}")
+            print(f"\nì¤ë¥ ë°ì: {e}")
             import traceback
             traceback.print_exc()
-            input("\n엔터를 누르면 종료합니다...")
+            input("\nìí°ë¥¼ ëë¥´ë©´ ì¢ë£í©ëë¤...")
